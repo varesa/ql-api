@@ -37,7 +37,10 @@ async fn main() -> Result<(), ApplicationError>{
     });
 
     let handles = vec![ql_task];
-    futures::future::join_all(handles).await;
+    for result in futures::future::join_all(handles).await {
+        result??;
+    }
+
 
     return Ok(());
 }

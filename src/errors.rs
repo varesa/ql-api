@@ -16,4 +16,6 @@ pub enum ApplicationError {
     #[error("Lines codec error: {0}")]
     LinesCodecError(#[from] tokio_util::codec::LinesCodecError),
 
+    #[error("Async task join error: {0}")]
+    JoinError(#[from] tokio::task::JoinError)
 }
