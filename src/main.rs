@@ -30,23 +30,29 @@ async fn main() -> Result<(), ApplicationError>{
 
     println!("Connecting to {:?}", &address);
 
-    // Hub will transmit messages from the clients to QL and vice versa
-    let mut hub = Hub::new().await;
-
     // A Task to handle the QL connection and messages to/from the hub
-    let mut ql = QL::new(&address, &mut hub).await?;
+    let (mut ql, ql_endpoint) = QL::connect(&address).await?;
+
+
     let ql_task = tokio::task::spawn(async move {
         ql.process().await?;
         Result::<(), ApplicationError>::Ok(())
     });
 
+    // Hub will transmit messages from the clients to QL and vice versa
+    let mut hub = Hub::new(ql_endpoint).await;
+    let client_state = hub.client_state.clone();
+
     // Websocket server
     let ws_task = tokio::task::spawn(async move {
-       server::websocket::test().await?;
+       server::websocket::listen(client_state.clone()).await?;
         Result::<(), ApplicationError>::Ok(())
     });
 
-    let handles = vec![ql_task, ws_task];
+    // Hub forwarding task
+    let hub_task = tokio::task::spawn(async move { hub.process().await });
+
+    let handles = vec![ql_task, ws_task, hub_task];
     for result in futures::future::join_all(handles).await {
         result??;
     }
