@@ -2,6 +2,7 @@ mod errors;
 mod ql;
 mod hub;
 mod bidirectional_channel;
+mod server;
 
 use std::env;
 use std::net::{ToSocketAddrs, SocketAddr};
@@ -29,18 +30,26 @@ async fn main() -> Result<(), ApplicationError>{
 
     println!("Connecting to {:?}", &address);
 
+    // Hub will transmit messages from the clients to QL and vice versa
     let mut hub = Hub::new().await;
 
+    // A Task to handle the QL connection and messages to/from the hub
+    let mut ql = QL::new(&address, &mut hub).await?;
     let ql_task = tokio::task::spawn(async move {
-        QL::new(&address, &mut hub).await?.process().await?;
+        ql.process().await?;
         Result::<(), ApplicationError>::Ok(())
     });
 
-    let handles = vec![ql_task];
+    // Websocket server
+    let ws_task = tokio::task::spawn(async move {
+       server::websocket::test().await?;
+        Result::<(), ApplicationError>::Ok(())
+    });
+
+    let handles = vec![ql_task, ws_task];
     for result in futures::future::join_all(handles).await {
         result??;
     }
-
 
     return Ok(());
 }

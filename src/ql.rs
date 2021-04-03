@@ -29,7 +29,7 @@ impl QL {
         Ok(ql)
     }
 
-    pub async fn process(&mut self) -> Result<(), ApplicationError>{
+    pub async fn process(&mut self) -> Result<(), ApplicationError> {
         loop {
             tokio::select! {
                 Some(Ok(msg)) = self.stream.next() => {
