@@ -1,13 +1,17 @@
 mod errors;
+mod ql;
+mod hub;
+mod bidirectional_channel;
 
 use std::env;
-use crate::errors::ApplicationError;
 use std::net::{ToSocketAddrs, SocketAddr};
-use crate::errors::ApplicationError::NameResolutionError;
+use crate::hub::Hub;
+use crate::ql::QL;
+use crate::errors::ApplicationError::{self, UsageError, NameResolutionError};
 
 fn get_address(args: Vec<String>) -> Result<SocketAddr, ApplicationError> {
     if args.len() < 2 || args.len() > 3  {
-        return Err(ApplicationError::UsageError(format!("{} <address> [<port>]", &args[0])).into());
+        return Err(UsageError(format!("{} <address> [<port>]", &args[0])).into());
     }
 
     let host = args[1].clone();
@@ -24,5 +28,16 @@ async fn main() -> Result<(), ApplicationError>{
     let address = get_address(args)?;
 
     println!("Connecting to {:?}", &address);
+
+    let mut hub = Hub::new().await;
+
+    let ql_task = tokio::task::spawn(async move {
+        QL::new(&address, &mut hub).await?.process().await?;
+        Result::<(), ApplicationError>::Ok(())
+    });
+
+    let handles = vec![ql_task];
+    futures::future::join_all(handles).await;
+
     return Ok(());
 }

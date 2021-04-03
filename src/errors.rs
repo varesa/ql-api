@@ -9,4 +9,11 @@ pub enum ApplicationError {
 
     #[error("Name resolution error: {0}")]
     NameResolutionError(String),
+
+    #[error("Send error: {0}")]
+    SendError(#[from] futures::channel::mpsc::SendError),
+
+    #[error("Lines codec error: {0}")]
+    LinesCodecError(#[from] tokio_util::codec::LinesCodecError),
+
 }
