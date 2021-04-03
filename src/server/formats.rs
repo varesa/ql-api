@@ -39,14 +39,14 @@ lazy_static! {
     //static ref FADER_REGEX: Regex = Regex::new("(.*)").unwrap();
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Fader {
-    position: u8,
-    value: i64,
-    comment: String,
+    position: Option<u8>,
+    value: Option<i64>,
+    comment: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Json1Message {
     channel: u8,
     fader: Option<Fader>,
@@ -63,9 +63,9 @@ impl TransportFormat for Json1 {
                 channel,
                 state: None,
                 fader: Some(Fader {
-                    position: to_position(value),
-                    value,
-                    comment,
+                    position: Some(to_position(value)),
+                    value: Some(value),
+                    comment: Some(comment),
                 })
             };
             return serde_json::to_string(&message).expect("Failed to serialize channel");
@@ -74,7 +74,19 @@ impl TransportFormat for Json1 {
         String::new()
     }
 
-    fn to_ql(&self, _json: String) -> String {
+    fn to_ql(&self, json: String) -> String {
+        let message: Json1Message = serde_json::from_str(&json).expect("Failed to parse JSON");
+        let channel = message.channel;
+        if let Some(fader) = message.fader {
+            let value = if let Some(value) = fader.value {
+                value
+            } else if let Some(position) = fader.position {
+                to_value(position)
+            } else {
+                panic!("No value or position specified");
+            };
+            return format!("set MIXER:Current/InCh/Fader/Level {} 0 {}", channel, value)
+        }
         String::new()
     }
 }

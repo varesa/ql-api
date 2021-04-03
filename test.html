@@ -5,30 +5,45 @@
     <title>Title</title>
     <style>
         input {
-            margin-top: 100px;
-            transform: rotate(270deg);
+            margin-top: 50px;
+            //transform: rotate(270deg);
+            //height: 5px;
         }
     </style>
 </head>
 <body>
-    <input id="channel0" type="range" min="0" max="100">
-    <input id="channel1" type="range" min="0" max="100">
-    <input id="channel2" type="range" min="0" max="100">
-    <input id="channel3" type="range" min="0" max="100">
+    <input id="channel0" type="range" min="0" max="100" orient="vertical">
+    <input id="channel1" type="range" min="0" max="100" orient="vertical">
+    <input id="channel2" type="range" min="0" max="100" orient="vertical">
+    <input id="channel3" type="range" min="0" max="100" orient="vertical">
+    <input id="channel4" type="range" min="0" max="100" orient="vertical">
+    <input id="channel5" type="range" min="0" max="100" orient="vertical">
+    <input id="channel6" type="range" min="0" max="100" orient="vertical">
+    <input id="channel7" type="range" min="0" max="100" orient="vertical">
 <script>
     const s = new WebSocket('ws://127.0.0.1:8083', ['ql-json1']);
-    s.addEventListener('message', function (event) {
+    s.addEventListener('message', event => {
         const data = JSON.parse(event.data);
         console.log('QL: ', data);
 
         const id = "channel" + data.channel;
-        console.log(id);
         const input = document.getElementById(id);
-        console.log(input);
         input.value = data.fader.position;
-        console.log(data.position);
-        console.log(input.value);
     });
+
+    let sliders = document.getElementsByTagName("input");
+    for(let i = 0; i < sliders.length; i++) {
+        sliders[i].addEventListener('change', event => {
+           const channel = event.srcElement.id.substring(7);
+           const value = event.srcElement.value;
+           s.send(JSON.stringify({
+               channel: parseInt(channel),
+               fader: {
+                   position: parseInt(value)
+               }
+           }));
+        });
+    }
 
 
 </script>
