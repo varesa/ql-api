@@ -1,5 +1,6 @@
 use tokio::net::{TcpListener, TcpStream};
 use crate::errors::ApplicationError;
+use super::formats;
 use futures::{StreamExt, SinkExt};
 use tokio_tungstenite::tungstenite::{
     Message,
@@ -38,7 +39,7 @@ impl Callback for ProtocolFilter {
             Some(protocol) => {
                 let protocol = protocol.to_str().expect("Failed to convert header to String".into());
                 match protocol {
-                    "ql-raw" => {
+                    "ql-raw" | "ql-json1" => {
                         self.protocol.lock().unwrap().insert_str(0, protocol);
                         Ok(response)
                     }
@@ -57,7 +58,14 @@ async fn handle_client(stream: TcpStream, client_state: Arc<Mutex<ClientState>>)
 
     let ws_stream = tokio_tungstenite::accept_hdr_async(stream, protocol_filter).await
         .expect("Error during the websocket handshake");
-    println!("Protocol: {}", protocol.lock().unwrap());
+    let protocol = protocol.lock().unwrap().clone();
+    println!("Protocol: {}", protocol);
+
+    let format: Box<dyn formats::TransportFormat> = match protocol.as_str() {
+        "ql-raw" => Box::new(formats::Raw {}),
+        "ql-json1" => Box::new(formats::Json1 {}),
+        _ => unimplemented!("Protocol {} not implemented", protocol),
+    };
 
     let (mut hub_tx, mut hub_rx) = {
         let mut client_state = client_state.lock().unwrap();
@@ -67,14 +75,16 @@ async fn handle_client(stream: TcpStream, client_state: Arc<Mutex<ClientState>>)
 
     loop {
         tokio::select! {
-            Some(Ok(message)) = ws_rx.next() => {
-                let message = message.into_text().expect("Failed to convert to text");
-                println!("WS R: {}", &message);
-                hub_tx.send(message).await.expect("Failed to send");
+            Some(Ok(message_ws)) = ws_rx.next() => {
+                let message_client = message_ws.into_text().expect("Failed to convert to text");
+                println!("WS R: {}", &message_client);
+                let message_ql = format.to_ql(message_client);
+                hub_tx.send(message_ql).await.expect("Failed to send");
             }
-            Some(message) = hub_rx.next() => {
-                println!("WS S: {}", &message);
-                ws_tx.send(Message::from(message)).await.expect("Failed to send");
+            Some(message_ql) = hub_rx.next() => {
+                let message_client = format.from_ql(message_ql);
+                println!("WS S: {}", &message_client);
+                ws_tx.send(Message::from(message_client)).await.expect("Failed to send");
             }
         }
     }

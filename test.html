@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        input {
+            margin-top: 100px;
+            transform: rotate(270deg);
+        }
+    </style>
+</head>
+<body>
+    <input id="channel0" type="range" min="0" max="100">
+    <input id="channel1" type="range" min="0" max="100">
+    <input id="channel2" type="range" min="0" max="100">
+    <input id="channel3" type="range" min="0" max="100">
+<script>
+    const s = new WebSocket('ws://127.0.0.1:8083', ['ql-json1']);
+    s.addEventListener('message', function (event) {
+        const data = JSON.parse(event.data);
+        console.log('QL: ', data);
+
+        const id = "channel" + data.channel;
+        console.log(id);
+        const input = document.getElementById(id);
+        console.log(input);
+        input.value = data.fader.position;
+        console.log(data.position);
+        console.log(input.value);
+    });
+
+
+</script>
+</body>
+</html>
