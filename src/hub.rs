@@ -45,7 +45,6 @@ impl Hub {
         loop {
             tokio::select! {
                 Some(message) = self.ql_channel.rx.next() => {
-                    println!("hub: {}", message);
                     for client in &mut self.client_state.lock().unwrap().clients {
                         let mut client = client.clone();
                         let message = message.clone();

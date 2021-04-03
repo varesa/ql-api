@@ -31,11 +31,11 @@ impl QL {
         loop {
             tokio::select! {
                 Some(Ok(msg)) = self.stream.next() => {
-                    println!("R: {:?}", msg);
+                    println!("QL R: {:?}", msg);
                     self.hub_channel.tx.send(msg).await?;
                 }
                 Some(msg) = self.hub_channel.rx.next() => {
-                    println!("S: {:?}", msg);
+                    println!("QL S: {:?}", msg);
                     self.stream.send(msg).await?;
                 }
             }

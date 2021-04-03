@@ -68,13 +68,13 @@ async fn handle_client(stream: TcpStream, client_state: Arc<Mutex<ClientState>>)
     loop {
         tokio::select! {
             Some(Ok(message)) = ws_rx.next() => {
-                //println!("x: {:?}", x.into_text());
-                hub_tx.send(message.into_text().expect("Failed to convert to text")).await.expect("Failed to send");
+                let message = message.into_text().expect("Failed to convert to text");
+                println!("WS R: {}", &message);
+                hub_tx.send(message).await.expect("Failed to send");
             }
             Some(message) = hub_rx.next() => {
-                println!("ws: {}", &message);
-                let x = ws_tx.send(Message::from(message)).await; //.expect("Failed to send");
-                println!("x: {:?}", x);
+                println!("WS S: {}", &message);
+                ws_tx.send(Message::from(message)).await.expect("Failed to send");
             }
         }
     }
