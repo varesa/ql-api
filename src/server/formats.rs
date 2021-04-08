@@ -1,16 +1,22 @@
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-const SCALE: f64 = (32768.0+1000.0)/2.0;
-const OFFSET: f64 = -32768.0;
+const SCALE: f64 = (10000.0+1000.0)/2.0;
+const OFFSET: f64 = -10000.0;
+const VALUE_THRESHOLD: i64 = -10000;
+const VALUE_MIN: i64 = -32768;
 
 fn to_position(value: i64) -> u8 {
-    10.0_f64.powf((value as f64 - OFFSET) / SCALE).round() as u8
+    if value <= VALUE_THRESHOLD {
+        0
+    } else {
+        10.0_f64.powf((value as f64 - OFFSET) / SCALE).round() as u8
+    }
 }
 
 fn to_value(position: u8) -> i64 {
-    if position == 0 {
-        (0.0 + OFFSET) as i64
+    if position <= 1 {
+        VALUE_MIN
     } else {
         ((position as f64).log10() * SCALE + OFFSET).round() as i64
     }
