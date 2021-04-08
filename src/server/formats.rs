@@ -42,7 +42,7 @@ impl TransportFormat for Raw {
 pub struct Json1 {}
 lazy_static! {
     static ref FADER_REGEX: Regex = Regex::new(r#"(OK|NOTIFY) set MIXER:Current/InCh/Fader/Level (\d+) (\d+) (-?\d+) "(.*)""#).unwrap();
-    //static ref FADER_REGEX: Regex = Regex::new("(.*)").unwrap();
+    static ref ON_REGEX: Regex = Regex::new(r#"(OK|NOTIFY) set MIXER:Current/InCh/Fader/On (\d+) (\d+) (\d+) "(.*)""#).unwrap();
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -76,6 +76,17 @@ impl TransportFormat for Json1 {
             };
             return serde_json::to_string(&message).expect("Failed to serialize channel");
         }
+        
+        if let Some(captures) = ON_REGEX.captures(&raw) {
+            let channel = captures[2].parse().expect("Failed to parse channel");
+            let value = &captures[4] == "1";
+            let message = Json1Message {
+                channel,
+                state: Some(value),
+                fader: None,
+            };
+            return serde_json::to_string(&message).expect("Failed to serialize channel");
+        }
 
         String::new()
     }
@@ -92,6 +103,10 @@ impl TransportFormat for Json1 {
                 panic!("No value or position specified");
             };
             return format!("set MIXER:Current/InCh/Fader/Level {} 0 {}", channel, value)
+        }
+        if let Some(state) = message.state {
+            let value = if state { "1" } else { "0" };
+            return format!("set MIXER:Current/InCh/Fader/On {} 0 {}", channel, value)
         }
         String::new()
     }

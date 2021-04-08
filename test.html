@@ -9,26 +9,50 @@
             //transform: rotate(270deg);
             //height: 5px;
         }
+
+        #wrapper {
+            display: flex;
+        }
     </style>
 </head>
 <body>
-    <input id="channel0" type="range" min="0" max="100" orient="vertical">
-    <input id="channel1" type="range" min="0" max="100" orient="vertical">
-    <input id="channel2" type="range" min="0" max="100" orient="vertical">
-    <input id="channel3" type="range" min="0" max="100" orient="vertical">
-    <input id="channel4" type="range" min="0" max="100" orient="vertical">
-    <input id="channel5" type="range" min="0" max="100" orient="vertical">
-    <input id="channel6" type="range" min="0" max="100" orient="vertical">
-    <input id="channel7" type="range" min="0" max="100" orient="vertical">
-<script>
+    <div id="wrapper"></div>
+    <script>
+
+    const CHANNELS = 8;
+    for (let i = 0; i < CHANNELS; i++) {
+        let state = document.createElement('span');
+        state.id = "state" + i;
+        state.innerText = "???";
+
+        let slider = document.createElement('input');
+        slider.id = "fader" + i;
+        slider.type = "range";
+        slider.min = 0;
+        slider.max = 100;
+        slider.setAttribute("orient", "vertical");
+
+        let channel = document.createElement('div');
+        channel.appendChild(state);
+        channel.appendChild(slider);
+        document.getElementById('wrapper').appendChild(channel);
+    }
+
     const s = new WebSocket('ws://127.0.0.1:8083', ['ql-json1']);
     s.addEventListener('message', event => {
         const data = JSON.parse(event.data);
         console.log('QL: ', data);
 
-        const id = "channel" + data.channel;
-        const input = document.getElementById(id);
-        input.value = data.fader.position;
+        if (data.fader) {
+            const id = "fader" + data.channel;
+            const input = document.getElementById(id);
+            input.value = data.fader.position;
+        }
+        if (data.state !== undefined) {
+            const id = "state" + data.channel;
+            const input = document.getElementById(id);
+            input.innerText = data.state ? "ON" : "OFF";
+        }
     });
 
     let eventHandler = event => {
@@ -47,8 +71,6 @@
         sliders[i].addEventListener('input', eventHandler);
 
     }
-
-
-</script>
+    </script>
 </body>
 </html>
