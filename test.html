@@ -31,18 +31,21 @@
         input.value = data.fader.position;
     });
 
+    let eventHandler = event => {
+       const channel = event.srcElement.id.substring(7);
+       const value = event.srcElement.value;
+       s.send(JSON.stringify({
+           channel: parseInt(channel),
+           fader: {
+               position: parseInt(value)
+           }
+       }));
+    };
     let sliders = document.getElementsByTagName("input");
     for(let i = 0; i < sliders.length; i++) {
-        sliders[i].addEventListener('change', event => {
-           const channel = event.srcElement.id.substring(7);
-           const value = event.srcElement.value;
-           s.send(JSON.stringify({
-               channel: parseInt(channel),
-               fader: {
-                   position: parseInt(value)
-               }
-           }));
-        });
+        sliders[i].addEventListener('change', eventHandler);
+        sliders[i].addEventListener('input', eventHandler);
+
     }
 
 
