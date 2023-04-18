@@ -1,6 +1,5 @@
 use tokio::net::{TcpListener, TcpStream};
-use crate::errors::ApplicationError;
-use super::formats;
+use http::header::HeaderValue;
 use futures::{StreamExt, SinkExt};
 use tokio_tungstenite::tungstenite::{
     Message,
@@ -9,9 +8,12 @@ use tokio_tungstenite::tungstenite::{
     }
 };
 use std::sync::{Mutex, Arc};
-use crate::hub::ClientState;
 
-const BIND_TO: &str = "127.0.0.1:8083";
+use crate::errors::ApplicationError;
+use crate::hub::ClientState;
+use super::formats;
+
+const BIND_TO: &str = "0.0.0.0:8083";
 
 pub async fn listen(client_state: Arc<Mutex<ClientState>>) -> Result<(), ApplicationError>{
     let listener = TcpListener::bind(BIND_TO).await?;
@@ -31,7 +33,7 @@ struct ProtocolFilter {
 }
 
 impl Callback for ProtocolFilter {
-    fn on_request(self, request: &Request, response: Response) -> Result<Response, ErrorResponse> {
+    fn on_request(self, request: &Request, mut response: Response) -> Result<Response, ErrorResponse> {
         match request.headers().get("sec-websocket-protocol") {
             None => {
                 Err(ErrorResponse::new(Some("Websocket subprotocol missing".into())))
@@ -41,6 +43,10 @@ impl Callback for ProtocolFilter {
                 match protocol {
                     "ql-raw" | "ql-json1" => {
                         self.protocol.lock().unwrap().insert_str(0, protocol);
+                        response.headers_mut().insert(
+                            "Sec-WebSocket-Protocol", 
+                            HeaderValue::from_str(protocol).unwrap(),
+                        );
                         Ok(response)
                     }
                     _ => {
